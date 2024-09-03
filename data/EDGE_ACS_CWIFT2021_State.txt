@@ -1,0 +1,52 @@
+ST_FIPS	ST_NAME	ST_CWIFTEST	ST_CWIFTSE
+01	Alabama	0.87	0.004
+02	Alaska	1.004	0.012
+04	Arizona	0.953	0.004
+05	Arkansas	0.892	0.006
+06	California	1.182	0.002
+08	Colorado	0.987	0.003
+09	Connecticut	1.075	0.005
+10	Delaware	0.992	0.008
+11	District of Columbia	1.272	0.006
+12	Florida	0.9	0.002
+13	Georgia	0.97	0.003
+15	Hawaii	1.015	0.007
+16	Idaho	0.872	0.008
+17	Illinois	1.016	0.003
+18	Indiana	0.878	0.004
+19	Iowa	0.881	0.004
+20	Kansas	0.862	0.005
+21	Kentucky	0.857	0.004
+22	Louisiana	0.897	0.005
+23	Maine	0.872	0.005
+24	Maryland	1.082	0.004
+25	Massachusetts	1.103	0.003
+26	Michigan	0.921	0.003
+27	Minnesota	1.011	0.003
+28	Mississippi	0.834	0.006
+29	Missouri	0.897	0.003
+30	Montana	0.836	0.008
+31	Nebraska	0.863	0.005
+32	Nevada	0.971	0.006
+33	New Hampshire	0.969	0.007
+34	New Jersey	1.095	0.003
+35	New Mexico	0.909	0.007
+36	New York	1.14	0.002
+37	North Carolina	0.931	0.003
+38	North Dakota	0.882	0.009
+39	Ohio	0.905	0.003
+40	Oklahoma	0.865	0.004
+41	Oregon	0.995	0.004
+42	Pennsylvania	0.952	0.002
+44	Rhode Island	0.994	0.009
+45	South Carolina	0.884	0.004
+46	South Dakota	0.842	0.008
+47	Tennessee	0.897	0.003
+48	Texas	0.978	0.002
+49	Utah	0.912	0.004
+50	Vermont	0.896	0.009
+51	Virginia	1.035	0.003
+53	Washington	1.122	0.004
+54	West Virginia	0.809	0.006
+55	Wisconsin	0.91	0.003
+56	Wyoming	0.845	0.012
