@@ -46,13 +46,30 @@ income_data <- get_acs(
 county_cwift |> 
   skimr::skim_without_charts()
 
-# top 5 counties
+# summary of CWIFTs per state
+county_cwift |> 
+  group_by(st_name) |> 
+  skimr::skim_without_charts(cnty_cwiftest)
+
+# number of counties per state
+county_cwift |> 
+  count(st_name, name = "num_counties", sort = TRUE)
+
+# top 5 cwift counties
 county_cwift |> 
   slice_max(cnty_cwiftest, n = 5)
 
-# bottom 5 counties
+# max cwift county per state
+county_cwift |> 
+  slice_max(cnty_cwiftest, n = 1, by = st_name)
+
+# bottom 5 cwift counties
 county_cwift |> 
   slice_min(cnty_cwiftest, n = 5)
+
+# min cwift county per state
+county_cwift |> 
+  slice_min(cnty_cwiftest, n = 1, by = st_name)
 
 # inspect county CWIFT estimates
 (cwift_estimates <- county_cwift |> 
@@ -125,7 +142,7 @@ county_cwift |>
   ggplot(aes(fill = cnty_cwiftest)) +
     geom_sf(color = "grey80") +
     scale_fill_distiller(
-      name = "County\nCWIFT",
+      name = "County\nCWIFT  ",
       type = "seq",
       direction = 1,
       palette = "Greys", limits = c(0.5, 1.5)
@@ -141,7 +158,7 @@ county_cwift_state_map <- function(state_abb = "SD"){
     ggplot(aes(fill = cnty_cwiftest)) +
     geom_sf(color = "grey80") +
     scale_fill_distiller(
-      name = "County\nCWIFT",
+      name = "County\nCWIFT  ",
       type = "seq",
       direction = 1,
       palette = "Greys", limits = c(0.5, 1.5)
@@ -193,9 +210,12 @@ county_cwift_state_map(census_west_region_states)
 (county_state_heatmaps <- 
     county_cwift_state_map("CA") + 
     (county_cwift_state_map("SD") / county_cwift_state_map("MD")) +
-    plot_annotation(tag_levels = "A") +
+    plot_annotation(tag_levels = "A", tag_prefix = "(", tag_suffix = ")") +
     plot_layout(guides = "collect") &
-    theme(legend.position = "bottom"))
+    theme(
+      legend.position = "bottom",
+      plot.tag = element_text(size = 12)
+    ))
 
 # write out/save images
 ggsave(
@@ -217,6 +237,14 @@ ggsave(
 ggsave(
   filename = "plots/county_cwift_heatmap.png",
   plot = county_cwift_heatmap,
+  height= 5,
+  width = 6,
+  units = "in"
+)
+
+ggsave(
+  filename = "plots/county_cwift_by_income.png",
+  plot = cwift_by_income,
   height= 5,
   width = 6,
   units = "in"

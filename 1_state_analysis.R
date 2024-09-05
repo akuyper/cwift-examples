@@ -43,11 +43,11 @@ income_data <- get_acs(
 state_cwift |> 
   skimr::skim_without_charts()
 
-# top 5 states
+# top 5 cwift states
 state_cwift |> 
   slice_max(st_cwiftest, n = 5)
 
-# bottom 5 states
+# bottom 5 cwift states
 state_cwift |> 
   slice_min(st_cwiftest, n = 5)
 
@@ -76,7 +76,7 @@ state_cwift |>
 (dot_density_cwift <- state_cwift |> 
   ggplot(aes(st_cwiftest)) +
   ggdist::geom_dots() +
-  theme_classic(base_size = 14) +
+  theme_classic() +
   theme(
     axis.text.y = element_blank(),
     axis.ticks.y = element_blank()
@@ -167,13 +167,17 @@ census_west_region_states <- tibble(
 # Example CWIFT plots
 (state_plot_collection <- cwift_estimates + 
   (density_plot_cwift / box_plot_cwift  / dot_density_cwift) +
-  plot_annotation(tag_levels = "A"))
+  plot_annotation(tag_levels = "A", tag_prefix = "(", tag_suffix = ")")) &
+  theme(plot.tag = element_text(size = 12))
 
 # CWIFT heat maps
 (state_heat_maps <- (state_cwift_heat_map + st_cwift_bins_plot) +
-  plot_annotation(tag_levels = "A") +
+  plot_annotation(tag_levels = "A", tag_prefix = "(", tag_suffix = ")") +
   plot_layout(guides = "collect") &
-  theme(legend.position = "bottom"))
+  theme(
+    legend.position = "bottom",
+    plot.tag = element_text(size = 12)
+  ))
 
 # write out/save images
 ggsave(
