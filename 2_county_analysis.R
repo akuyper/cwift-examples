@@ -1,10 +1,11 @@
-# 
+# County CWIFT exploration ----
 
 # load packages ----
 library(tidyverse)
 library(tigris)
 library(tidycensus)
 library(sf)
+library(patchwork)
 
 # load data ----
 
@@ -14,7 +15,7 @@ county_cwift <- read_tsv("data/EDGE_ACS_CWIFT2021_County.txt") |>
   mutate(
     cnty_name = iconv(cnty_name, "latin1"),
     statefp = str_extract(cnty_fips, "^\\d\\d")
-    )
+  )
 
 # county map data
 county_map_data <- tigris::counties(year = 2021, cb = TRUE) |> 
@@ -22,45 +23,7 @@ county_map_data <- tigris::counties(year = 2021, cb = TRUE) |>
   janitor::clean_names() |> 
   filter(statefp %in% unique(county_cwift$statefp))
 
-# explore data ----
-
-# quick summary of data
-county_cwift |> 
-  skimr::skim_without_charts()
-
-# inspect county CWIFT estimates
-county_cwift |> 
-  # slice_sample(prop = 0.02) |> 
-  arrange(cnty_cwiftest) |> 
-  mutate(x_index = row_number()) |> 
-  ggplot(aes(x = x_index, cnty_cwiftest)) +
-  geom_errorbar(
-    aes(
-      ymin = cnty_cwiftest - 2*cnty_cwiftse,
-      ymax = cnty_cwiftest + 2*cnty_cwiftse,
-      )
-    ) + 
-  geom_hline(yintercept = 1) +
-  coord_flip()
-
-county_cwift |> 
-  ggplot(aes(cnty_cwiftest)) +
-  ggdist::geom_dots() 
-
-county_cwift |> 
-  ggplot(aes(cnty_cwiftest)) +
-  geom_boxplot() 
-
-county_cwift |> 
-  ggplot(aes(cnty_cwiftest)) +
-  geom_density() 
-
-county_cwift |> 
-  mutate(st_name = fct_reorder(factor(st_name), cnty_cwiftest, .fun = median, .na_rm = TRUE)) |> 
-  ggplot(aes(x = st_name, cnty_cwiftest)) +
-  geom_boxplot() +
-  coord_flip()
-
+# join county CWIFT data with mapping/geographic data
 county_cwift_map_data <- county_map_data |> 
   left_join(
     county_cwift |> 
@@ -68,81 +31,148 @@ county_cwift_map_data <- county_map_data |>
     by = c("geoid" = "cnty_fips")
   ) 
 
-haha <- county_cwift_map_data |> 
-  ggplot(aes(fill = cnty_cwiftest), color = NA) +
-    geom_sf() +
+# county household income data from ACS
+income_data <- get_acs(
+  geography = "county",    
+  year = 2021,             
+  survey = "acs5",         
+  variables = "B19013_001" 
+  ) |> 
+  janitor::clean_names()
+
+# Explore CWIFT data ----
+
+# quick summary of data
+county_cwift |> 
+  skimr::skim_without_charts()
+
+# top 5 counties
+county_cwift |> 
+  slice_max(cnty_cwiftest, n = 5)
+
+# bottom 5 counties
+county_cwift |> 
+  slice_min(cnty_cwiftest, n = 5)
+
+# inspect county CWIFT estimates
+(cwift_estimates <- county_cwift |> 
+  arrange(cnty_cwiftest)  |> 
+  mutate(cnty_fips = fct_inorder(factor(cnty_fips)))|> 
+  ggplot(aes(cnty_cwiftest, cnty_fips)) +
+  geom_vline(xintercept = 1, linetype = "dashed") +
+  geom_errorbar(
+    mapping = aes(
+      xmin = cnty_cwiftest - qnorm(0.975) * cnty_cwiftse,
+      xmax = cnty_cwiftest + qnorm(0.975) * cnty_cwiftse
+    ),
+    width = 0.3,
+    alpha = 0.2
+  ) + 
+  theme_classic() +
+  theme(
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank()
+    ) +
+  labs(
+    x = "County CWIFT",
+    y = "Counties"
+  ))
+
+# too many individual counties, group by state and use boxplot
+(cwift_estimates_by_state <- county_cwift |> 
+  mutate(
+    st_name = fct_reorder(
+        .f = factor(st_name),
+        .x = cnty_cwiftest, 
+        .fun = median, 
+        .na_rm = TRUE
+        )
+    ) |> 
+  ggplot(aes(cnty_cwiftest, st_name)) +
+  geom_boxplot(color = "gray60") +
+  geom_vline(xintercept = 1, linetype = "dashed") +
+  theme_classic() +
+  labs(
+    x = "County CWIFT",
+    y = NULL
+  ))
+
+# univariate graphs for county CWIFT
+
+# dot density plot
+(dot_density_cwift <- county_cwift |> 
+    ggplot(aes(cnty_cwiftest)) +
+    ggdist::geom_dots() +
+    theme_classic(base_size = 14) +
+    theme(
+      axis.text.y = element_blank(),
+      axis.ticks.y = element_blank()
+    ) +
+    xlab("county CWIFT"))
+
+# box plot
+(box_plot_cwift <- county_cwift |> 
+  ggplot(aes(cnty_cwiftest)) +
+  geom_boxplot()) 
+
+# density plot
+(density_plot_cwift <-county_cwift |> 
+  ggplot(aes(cnty_cwiftest)) +
+  geom_density()) 
+
+# CWIFT county heat map
+(county_cwift_heatmap <- county_cwift_map_data |> 
+  ggplot(aes(fill = cnty_cwiftest)) +
+    geom_sf(color = "grey80") +
     scale_fill_distiller(
+      name = "County\nCWIFT",
       type = "seq",
       direction = 1,
       palette = "Greys", limits = c(0.5, 1.5)
     ) +
-    theme_void()
+    theme_void())
 
-county_cwift_map_data |> 
-  filter(
-    stusps %in% c("MA")
+# function to make county map for a single state or group of states
+county_cwift_state_map <- function(state_abb = "SD"){
+  county_cwift_map_data |> 
+    filter(
+      stusps %in% c(state_abb)
+    ) |> 
+    ggplot(aes(fill = cnty_cwiftest)) +
+    geom_sf(color = "grey80") +
+    scale_fill_distiller(
+      name = "County\nCWIFT",
+      type = "seq",
+      direction = 1,
+      palette = "Greys", limits = c(0.5, 1.5)
+    ) +
+    theme_void() +
+    theme(plot.title = element_text(hjust = 0.5)) +
+    coord_sf(crs = 4269)
+}
+
+# state maps
+county_cwift_state_map("SD")
+county_cwift_state_map("MD")
+county_cwift_state_map("CA")
+county_cwift_state_map("CO") 
+
+# Heat map with states in Census defined West region (remove AK & HI)
+# list of states in Census defined west region
+census_west_region_states <- tibble(
+    state_abb = state.abb, 
+    region = as.character(state.region)
   ) |> 
-  ggplot(aes(fill = cnty_cwiftest), color = NA) +
-  geom_sf() +
-  scale_fill_distiller(
-    type = "seq",
-    direction = 1,
-    palette = "Greys", limits = c(0.5, 1.5)
-  ) +
-  theme_void()
+  filter(region == "West") |> 
+  pull(state_abb) |> 
+  # remove AK & HI
+  setdiff(c("AK", "HI"))
 
-county_cwift_map_data |> 
-  filter(
-    stusps %in% c("SD")
-  ) |> 
-  ggplot(aes(fill = cnty_cwiftest), color = NA) +
-  geom_sf() +
-  scale_fill_distiller(
-    type = "seq",
-    direction = 1,
-    palette = "Greys", limits = c(0.5, 1.5)
-  ) +
-  theme_void()
+# US west without AK & HI
+county_cwift_state_map(census_west_region_states)
 
-county_cwift_map_data |> 
-  filter(
-    stusps %in% c("NJ", "NY", "PA")
-  ) |> 
-  ggplot(aes(fill = cnty_cwiftest), color = NA) +
-  geom_sf() +
-  scale_fill_distiller(
-    type = "seq",
-    direction = 1,
-    palette = "Greys", limits = c(0.5, 1.5)
-  ) +
-  theme_void()
-
-county_cwift_map_data |> 
-  filter(
-    stusps %in% c("TX")
-  ) |> 
-  ggplot(aes(fill = cnty_cwiftest), color = NA) +
-  geom_sf() +
-  scale_fill_distiller(
-    type = "seq",
-    direction = 1,
-    palette = "Greys", limits = c(0.5, 1.5)
-  ) +
-  theme_void()
-
-
-ggsave(filename = "test.pdf", plot = haha, width = 11.5, height = 8)
-
-
-income_data <- get_acs(
-  geography = "county",    # Specify the geography level
-  year = 2021,             # Specify the year
-  survey = "acs5",         # Specify the 5-year ACS survey
-  variables = "B19013_001" # The ACS variable for median household income
-  ) |> 
-  janitor::clean_names()
-
-income_data |> 
+# county cwift by household income
+(cwift_by_income <-income_data |> 
   inner_join(
     county_cwift |> 
       select(cnty_fips, cnty_cwiftest, cnty_cwiftse),
@@ -150,13 +180,45 @@ income_data |>
   ) |>
   ggplot(aes(x = estimate, cnty_cwiftest)) +
   geom_point(alpha = 0.3) +
-  geom_smooth()
+  geom_smooth(se = FALSE) +
+  scale_x_continuous(
+    name = "Median Household Income", 
+    labels = scales::label_currency()
+  ) +
+  ylab("County CWIFT") +
+  theme_minimal())
 
-county_cwift |> 
-  ggplot(aes(cnty_cwiftest, 1)) +
-  ggbeeswarm::geom_quasirandom(alpha = 0.2)
+# arranging plots & writing/saving plots out for book chapter
+# CWIFT heat maps
+(county_state_heatmaps <- 
+    county_cwift_state_map("CA") + 
+    (county_cwift_state_map("SD") / county_cwift_state_map("MD")) +
+    plot_annotation(tag_levels = "A") +
+    plot_layout(guides = "collect") &
+    theme(legend.position = "bottom"))
 
-county_cwift |> 
-  ggplot(aes(cnty_cwiftest, y = st_name)) +
-  ggdist::geom_dots(layout = "hex", side = "both") +
-  theme_classic()
+# write out/save images
+ggsave(
+  filename = "plots/cwift_estimates_by_state.png",
+  plot = cwift_estimates_by_state,
+  height= 7,
+  width = 6,
+  units = "in"
+)
+
+ggsave(
+  filename = "plots/county_state_heatmaps.png",
+  plot = county_state_heatmaps,
+  height= 5,
+  width = 6,
+  units = "in"
+)
+
+ggsave(
+  filename = "plots/county_cwift_heatmap.png",
+  plot = county_cwift_heatmap,
+  height= 5,
+  width = 6,
+  units = "in"
+)
+

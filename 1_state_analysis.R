@@ -14,14 +14,6 @@ library(patchwork)
 state_cwift <- read_tsv("data/EDGE_ACS_CWIFT2021_State.txt") |> 
   janitor::clean_names()
 
-# top 5 states
-state_cwift |> 
-  slice_max(st_cwiftest, n = 5)
-
-# bottom 5 states
-state_cwift |> 
-  slice_min(st_cwiftest, n = 5)
-
 # state map data
 state_map_data <- tigris::states(year = 2021, cb = TRUE) |> 
   shift_geometry() |> 
@@ -51,20 +43,23 @@ income_data <- get_acs(
 state_cwift |> 
   skimr::skim_without_charts()
 
-# inspect county CWIFT estimates
-(cwift_estimates <- state_cwift |> 
-  mutate(
-    st_name = fct_reorder(
-      factor(st_name), 
-      st_cwiftest, 
-      .fun = median, 
-      .na_rm = TRUE)
-    ) |> 
+# top 5 states
+state_cwift |> 
+  slice_max(st_cwiftest, n = 5)
+
+# bottom 5 states
+state_cwift |> 
+  slice_min(st_cwiftest, n = 5)
+
+# inspect state CWIFT estimates
+(cwift_estimates <- state_cwift |>
+  arrange(st_cwiftest)  |> 
+  mutate(st_name = fct_inorder(factor(st_name))) |> 
   ggplot(aes(st_cwiftest, st_name)) +
   geom_errorbar(
     mapping = aes(
-      xmin = st_cwiftest - 2*st_cwiftse,
-      xmax = st_cwiftest + 2*st_cwiftse
+      xmin = st_cwiftest - qnorm(0.975) * st_cwiftse,
+      xmax = st_cwiftest + qnorm(0.975) * st_cwiftse
     ),
     width = 0.3
     ) + 
@@ -75,7 +70,7 @@ state_cwift |>
     y = NULL
   ))
 
-# univariate graphs fo state CWIFT
+# univariate graphs for state CWIFT
 
 # dot density plot
 (dot_density_cwift <- state_cwift |> 
@@ -100,19 +95,23 @@ state_cwift |>
 
 # CWIFT state heat map
 (state_cwift_heat_map <- state_cwift_map_data |> 
-  ggplot(aes(fill = st_cwiftest), color = NA) +
+  ggplot(aes(fill = st_cwiftest)) +
   geom_sf() +
   scale_fill_distiller(
     name = "State\nCWIFT",
     type = "seq",
     direction = 1,
-    palette = "Greys", limits = c(0.75, 1.5)
+    palette = "Greys", 
+    limits = c(0.75, 1.5)
   ) +
   theme_void())
 
 # Heat map with states in Census defined West region
 # list of states in Census defined west region
-census_west_region_states <- tibble(state_abb = state.abb, region = as.character(state.region)) |> 
+census_west_region_states <- tibble(
+    state_abb = state.abb, 
+    region = as.character(state.region)
+  ) |> 
   filter(region == "West") |> 
   pull(state_abb)
 
@@ -121,14 +120,15 @@ census_west_region_states <- tibble(state_abb = state.abb, region = as.character
   filter(
     stusps %in% c(census_west_region_states)
   ) |> 
-  ggplot(aes(fill = st_cwiftest), color = NA) +
+  ggplot(aes(fill = st_cwiftest)) +
   geom_sf() +
   geom_sf_label(aes(label = stusps)) +
   scale_fill_distiller(
     name = "State\nCWIFT",
     type = "seq",
     direction = 1,
-    palette = "Greys", limits = c(0.75, 1.5)
+    palette = "Greys", 
+    limits = c(0.75, 1.5)
   ) +
   theme_void())
 
@@ -140,11 +140,12 @@ census_west_region_states <- tibble(state_abb = state.abb, region = as.character
       name = "State\nCWIFT",
       type = "seq",
       direction = 1,
-      palette = "Greys", limits = c(0.75, 1.5)
+      palette = "Greys",
+      limits = c(0.75, 1.5)
     ) +
     theme_void())
 
-# state cwift by houeshold income
+# state cwift by household income
 (cwift_by_income <- income_data |> 
   inner_join(
     state_cwift |> 
@@ -153,11 +154,11 @@ census_west_region_states <- tibble(state_abb = state.abb, region = as.character
   ) |>
   ggplot(aes(x = estimate, st_cwiftest)) +
   geom_point() +
+  geom_smooth(se = FALSE) +
   scale_x_continuous(
     name = "Median Household Income", 
     labels = scales::label_currency()
   ) +
-  geom_smooth(se = FALSE) +
   ylab("State CWIFT") +
   theme_minimal())
 
