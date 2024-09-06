@@ -1,1 +1,1 @@
-## Placeholder
+## Data Exploration of Comparable Wage Index For Teachers (CWIFT)

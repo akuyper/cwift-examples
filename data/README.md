@@ -1,1 +1,1 @@
-## Data Exploration of Comparable Wage Index For Teachers (CWIFT)
+## Data Overview & Citation
