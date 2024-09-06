@@ -33,10 +33,10 @@ county_cwift_map_data <- county_map_data |>
 
 # county household income data from ACS
 income_data <- get_acs(
-  geography = "county",    
-  year = 2021,             
-  survey = "acs5",         
-  variables = "B19013_001" 
+    geography = "county",    
+    year = 2021,             
+    survey = "acs5",         
+    variables = "B19013_001" 
   ) |> 
   janitor::clean_names()
 
@@ -196,16 +196,18 @@ county_cwift_state_map(census_west_region_states)
     by = c("geoid" = "cnty_fips")
   ) |>
   ggplot(aes(x = estimate, cnty_cwiftest)) +
-  geom_point(alpha = 0.3) +
+  geom_point(alpha = 0.15) +
   geom_smooth(se = FALSE) +
-  scale_x_continuous(
-    name = "Median Household Income", 
-    labels = scales::label_currency()
+  scale_x_continuous(labels = scales::label_currency()) +
+  labs(
+    title = "County CWIFT by County Median Household Income",
+    x = NULL,
+    y = NULL
   ) +
-  ylab("County CWIFT") +
   theme_minimal())
 
-# arranging plots & writing/saving plots out for book chapter
+# arranging plots & writing/saving plots out for book chapter ----
+
 # CWIFT heat maps
 (county_state_heatmaps <- 
     county_cwift_state_map("CA") + 

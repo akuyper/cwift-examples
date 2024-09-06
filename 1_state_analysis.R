@@ -30,10 +30,10 @@ state_cwift_map_data <- state_map_data |>
 
 # state household income data from ACS
 income_data <- get_acs(
-  geography = "state",    
-  year = 2021,             
-  survey = "acs5",         
-  variables = "B19013_001" 
+    geography = "state",    
+    year = 2021,             
+    survey = "acs5",         
+    variables = "B19013_001" 
   ) |> 
   janitor::clean_names()
 
@@ -155,14 +155,15 @@ census_west_region_states <- tibble(
   ggplot(aes(x = estimate, st_cwiftest)) +
   geom_point() +
   geom_smooth(se = FALSE) +
-  scale_x_continuous(
-    name = "Median Household Income", 
-    labels = scales::label_currency()
+  scale_x_continuous(labels = scales::label_currency()) +
+  labs(
+    title = "State CWIFT by State Median Household Income",
+    x = NULL,
+    y = NULL
   ) +
-  ylab("State CWIFT") +
   theme_minimal())
 
-# arranging plots & writing/saving plots out for book chapter
+# arranging plots & writing/saving plots out for book chapter ----
 
 # Example CWIFT plots
 (state_plot_collection <- cwift_estimates + 
@@ -193,5 +194,13 @@ ggsave(
   plot = state_heat_maps,
   height= 3,
   width = 8,
+  units = "in"
+)
+
+ggsave(
+  filename = "plots/state_cwift_by_income.png",
+  plot = cwift_by_income,
+  height= 5,
+  width = 6,
   units = "in"
 )
